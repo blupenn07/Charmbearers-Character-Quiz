@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Which Character Are You?</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 24px;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #111018;
+  color: #f4efff;
+  font-family: Georgia, serif;
+}
+.container { width: 100%; max-width: 720px; }
+.eyebrow {
+  color: #c3a8ff;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  font: 11px Arial, sans-serif;
+}
+h1 {
+  font-size: clamp(34px, 7vw, 54px);
+  text-align: center;
+  font-weight: normal;
+  margin: 18px 0;
+}
+p { line-height: 1.8; color: #c7c1d4; }
+.intro { text-align: center; margin-bottom: 28px; }
+.panel {
+  background: #1b1925;
+  border: 1px solid #393247;
+  border-radius: 18px;
+  padding: 28px;
+}
+button {
+  cursor: pointer;
+  font: inherit;
+  transition: .2s;
+}
+.primary {
+  display: block;
+  margin: 24px auto 0;
+  border: 0;
+  border-radius: 30px;
+  background: #c3a8ff;
+  color: #17111f;
+  padding: 14px 30px;
+}
+.primary:hover { background: #ddceff; transform: translateY(-2px); }
+.topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #b7a5d8;
+  font: 12px Arial, sans-serif;
+}
+.track {
+  height: 4px;
+  background: #393247;
+  border-radius: 10px;
+  margin: 15px 0 28px;
+  overflow: hidden;
+}
+.progress {
+  height: 100%;
+  background: #c3a8ff;
+  width: 0%;
+  transition: width .3s;
+}
+h2 { font-weight: normal; font-size: 26px; line-height: 1.5; }
+.answers { display: grid; gap: 12px; margin-top: 24px; }
+.answer {
+  text-align: left;
+  color: #eee8fa;
+  background: #242130;
+  border: 1px solid #40384f;
+  border-radius: 12px;
+  padding: 17px;
+  line-height: 1.6;
+  width: 100%;
+}
+.answer:hover, .answer.selected {
+  border-color: #c3a8ff;
+  background: #302741;
+}
+.answer:disabled { cursor: default; opacity: .8; }
+.result { text-align: center; }
+.symbol { font-size: 48px; margin: 15px 0; color: #c3a8ff; }
+.result h2 { font-size: 36px; }
+.hidden { display: none !important; }
+.description { text-align: left; }
+.score-list { margin-top: 30px; text-align: left; }
+.score-row { margin: 18px 0; }
+.score-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font: 13px Arial, sans-serif;
+}
+.score-track {
+  height: 8px;
+  background: #393247;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.score-fill {
+  height: 100%;
+  background: #bba0f8;
+  border-radius: 10px;
+  transition: width .5s;
+}
+.small {
+  font: 12px Arial, sans-serif;
+  color: #9d94ad;
+}
+footer {
+  text-align: center;
+  color: #797286;
+  font: 11px Arial, sans-serif;
+  margin-top: 24px;
+}
+@media (max-width: 480px) {
+  .panel { padding: 21px; }
+  .topline { font-size: 10px; }
+}
+</style>
+</head>
+<body>
+<main class="container">
+  <div class="eyebrow">A journey into who you are</div>
+  <h1 id="title">Which Character Are You?</h1>
+  <p class="intro" id="intro">
+    Every soul carries a different story. Discover the character
+    that reflects yours.
+  </p>
+
+  <section class="panel" id="start">
+    <p style="text-align:center">
+      Answer honestly, follow your instincts, and discover which
+      character you resemble most. Every choice tells a story.
+    </p>
+    <button class="primary" onclick="begin()">Begin the quiz ↗</button>
+  </section>
+
+  <section class="panel hidden" id="quiz">
+    <div class="topline">
+      <span id="counter"></span>
+      <span id="percent"></span>
+    </div>
+    <div class="track"><div class="progress" id="progress"></div></div>
+    <h2 id="question"></h2>
+    <div class="answers" id="answers"></div>
+  </section>
+
+  <section class="panel hidden result" id="result">
+    <div class="eyebrow">Your closest match</div>
+    <div class="symbol" id="symbol">✧</div>
+    <h2 id="resultTitle"></h2>
+    <p class="description" id="description"></p>
+
+    <div class="score-list">
+      <div class="eyebrow">Your character breakdown</div>
+      <p class="small" style="text-align:center">
+        Your percentages represent each character's share of all points earned.
+      </p>
+      <div id="scores"></div>
+    </div>
+
+    <button class="primary" onclick="shareResult()">Share your result ↗</button>
+    <button class="primary" onclick="retake()"
+      style="background:transparent;color:#c3a8ff;border:1px solid #55466e">
+      Retake the quiz ↻
+    </button>
+    <p id="shareMessage" class="small"></p>
+  </section>
+
+  <footer>Every answer reveals a little more.</footer>
+</main>
+
+<script>
+// CHARACTER RESULTS
+const characters = {
+  Lia: {
+    symbol: "✧",
+    description: "You are an independent individual who strives to be better than the person they were yesterday. Although sometimes you lose your patience with others, you always try to improve yourself. You enjoy summer weather, romance books, and embrace an aesthetic lifestyle."
+  },
+  Clover: {
+    symbol: "❀",
+    description: "You are the life of the party. You are unafraid to show your optimism and positivity, especially when faced with challenges. However, your innocence sometimes becomes naivety, and others may find you overwhelming. You like spring weather, healthy drinks, and trying new things."
+  },
+  Peter: {
+    symbol: "◇",
+    description: "You are a perfectionistic individual and you always maintain your excellence and daily routine. While you can sometimes become too distant from others due to your logical thinking, your clear-headedness often saves you in dangerous situations. You prefer coffee, read non-fiction, and like to spend your days in quiet peace."
+  },
+  Natalie: {
+    symbol: "☼",
+    description: "You always jump into action, regardless of the cost. You are spontaneous and although you can be too impulsive sometimes, you have full confidence in yourself to resolve problems. Adventure calls to you! You like staying up at night, being physically active, and like your friends being your safety net."
+  },
+  Cassian: {
+    symbol: "❧",
+    description: "You are a thoughtful person and are affected by other people's suffering. While you can sometimes get too involved with others and have difficulty making hard decisions, your awareness and commitment to helping them is often comforting. You like poetry, meeting new people, and chasing your dreams."
+  },
+  Remi: {
+    symbol: "♜",
+    description: "You are someone who always wants to be recognized for their achievements. Although you have a tendency to lean into self-centeredness (which sometimes harms others), you are adaptable to every situation and have great self-preservation. You usually don't have a preference for things, but you do like dessert."
+  },
+  Avior: {
+    symbol: "☾",
+    description: "You are selfless and place the needs of others above your own. Sometimes, this leads to you neglecting yourself, but you never forget your dedication to achieving your goals. You prefer having alone time for yourself and spending time in nature to unwind yourself."
+  }
+};
+
+const names = Object.keys(characters);
+
+// An answer can award a point to one or multiple characters.
+function answer(text, ...types) {
+  return { text, types };
+}
+
+// Standard seven-answer order:
+// Lia, Clover, Peter, Natalie, Cassian, Remi, Avior.
+const standard = [
+  "Lia", "Clover", "Peter", "Natalie",
+  "Cassian", "Remi", "Avior"
+];
+
+// QUESTIONS AND SCORING
+const questions = [
+  {
+    question: "Where would you want to live?",
+    answers: [
+      answer("Cottage by the lake or the seaside", "Lia"),
+      answer("In the countryside", "Clover"),
+      answer("A quiet town", "Peter"),
+      answer("Travel the world", "Natalie"),
+      answer("It doesn't matter, I just need to be with the people I care about", "Cassian"),
+      answer("Wherever success calls me to", "Remi"),
+      answer("My home (forever)", "Avior")
+    ]
+  },
+  {
+    question: "What's your greatest fear?",
+    answers: [
+      answer("Falling behind in life", "Lia"),
+      answer("Not being able to help the people that I love", "Clover"),
+      answer("Harming others", "Peter"),
+      answer("Always being alone", "Natalie"),
+      answer("Facing a person that deeply affected my life", "Cassian"),
+      answer("People sacrificing things for me", "Remi"),
+      answer("Causing irreparable damage to relationships of any kind", "Avior")
+    ]
+  },
+  {
+    question: "Would you swear revenge and commit murder if someone harmed you or your close ones?",
+    answers: [
+      answer("Only if the opportunity comes", "Lia"),
+      answer("No, because I would feel guilty about it and I would rather protect those who remain alive", "Clover"),
+      answer("Yes, although I would feel guilty afterwards", "Peter"),
+      answer("Yes, if it is the most evil person alive because I am not the most inclined to murder", "Natalie"),
+      answer("Yes, if the person is threatening me or my close ones again", "Cassian", "Avior"),
+      answer("Absolutely. Eye for an eye.", "Remi")
+    ]
+  },
+  {
+    question: "What word would people use to describe you?",
+    answers: [
+      answer("Ambitious", "Lia"),
+      answer("Energetic", "Clover"),
+      answer("Perfectionistic", "Peter"),
+      answer("Nonchalant", "Natalie"),
+      answer("Charming", "Cassian"),
+      answer("Determined", "Remi"),
+      answer("Selfless", "Avior")
+    ]
+  },
+  {
+    question: "When faced with life-threatening danger, what do you do?",
+    answers: [
+      answer("Panic and freeze up", "Lia"),
+      answer("Go in denial and attempt to threaten with a twig", "Clover"),
+      answer("Calculate the best way to solve the situation", "Peter"),
+      answer("Jump into action and try to take them down with minimal damage", "Natalie"),
+      answer("Go physical only as a last resort - escape if possible", "Cassian"),
+      answer("They got in my way. Kill them no matter what it takes!", "Remi"),
+      answer("I don't have a choice. Their death was predetermined.", "Avior")
+    ]
+  },
+  {
+    question: "What is your biggest flaw?",
+    answers: [
+      answer("Impatience", "Lia"),
+      answer("Naivety", "Clover"),
+      answer("Attached to the past", "Peter"),
+      answer("Impulsiveness", "Natalie"),
+      answer("Excessive empathy", "Cassian"),
+      answer("Obsessiveness", "Remi"),
+      answer("Neglectment of self", "Avior")
+    ]
+  },
+  {
+    question: "What's your hobby?",
+    answers: [
+      answer("Putting together my wardrobe", "Lia"),
+      answer("Making any sort of food", "Clover"),
+      answer("Hiking and biking", "Peter"),
+      answer("Playing sports or practicing martial arts", "Natalie"),
+      answer("Writing creative pieces", "Cassian"),
+      answer("Research and learning about new topics", "Remi"),
+      answer("Exploring the outdoors and nature", "Avior")
+    ]
+  },
+  {
+    question: "Do you trust easily?",
+    answers: [
+      answer("Yes, if they've known me for a while", "Lia"),
+      answer("Yes! Everyone has their good qualities.", "Clover"),
+      answer("No, people always want to take advantage of you.", "Peter"),
+      answer("The amount of time it takes for me to trust someone depends on whether we click or not", "Natalie"),
+      answer("Yes, I'm open-minded", "Cassian"),
+      answer("No, my experiences have taught me that", "Remi"),
+      answer("No, but when I trust, I trust deeply", "Avior")
+    ]
+  },
+  {
+    question: "What weapon would you prefer to use when in grave danger?",
+    answers: [
+      answer("A dagger", "Lia"),
+      answer("My environment (for example a stick or a rock)", "Clover"),
+      answer("My brain, but anything works", "Peter"),
+      answer("Whatever I have on hand, it doesn't really matter", "Natalie"),
+      answer("A sword, but I'm proficient in others as well", "Cassian", "Avior"),
+      answer("My lackeys", "Remi")
+    ]
+  },
+  {
+    question: "What would you bring to a picnic?",
+    answers: [
+      answer("Homemade brownies", "Lia"),
+      answer("Smoothies", "Clover"),
+      answer("The cutlery, plates, cups, and everything else", "Peter"),
+      answer("Something exotic", "Natalie"),
+      answer("A charcuterie board", "Cassian"),
+      answer("Dessert", "Remi"),
+      answer("Homemade bread", "Avior")
+    ]
+  },
+  {
+    question: "What's your favorite weather?",
+    answers: [
+      answer("Sunny, no clouds in the sky, light breeze", "Lia"),
+      answer("Warm with a cool breeze and a wet climate", "Clover"),
+      answer("Stormy nights - thunder is comforting", "Peter"),
+      answer("Snowy and cloudy, preferably right after a snowstorm", "Natalie"),
+      answer("Cool temperatures with the autumn wind", "Cassian"),
+      answer("It doesn't matter", "Remi"),
+      answer("Soft rains", "Avior")
+    ]
+  },
+  {
+    question: "What is your greatest strength?",
+    answers: [
+      answer("Striving for my highest potential", "Lia"),
+      answer("Optimism in the face of dire situations", "Clover"),
+      answer("Clear headed with analytical thinking", "Peter"),
+      answer("Taking risks and being active", "Natalie"),
+      answer("Consideration for others", "Cassian"),
+      answer("Adaptability and never giving up", "Remi"),
+      answer("Dedication and effort to achieving my goal", "Avior")
+    ]
+  },
+  {
+    question: "How would you describe your mental state?",
+    answers: [
+      answer("Poor: self-hate, close to crisis, this is a horrible life", "Remi", "Avior"),
+      answer("Questionable: negativity hits me sometimes, but I'm sometimes able to recover to an extent", "Peter"),
+      answer("Neutral: it's alright. It could be better and it could be worse.", "Cassian"),
+      answer("Pretty good: I sometimes face difficulties, but overall life is good", "Lia", "Natalie"),
+      answer("Healthy: amazing! Living has never been better", "Clover")
+    ]
+  },
+  {
+    question: "Your biggest red flag:",
+    answers: [
+      answer("Sometimes insensitive", "Lia"),
+      answer("Ignorant to other people's problems", "Clover"),
+      answer("Too guarded and detached", "Peter"),
+      answer("Going in without a plan and sometimes too rash", "Natalie"),
+      answer("Indecisive", "Cassian"),
+      answer("Selfishness will destroy my relationships with others", "Remi"),
+      answer("Pessimistic of everything", "Avior")
+    ]
+  },
+  {
+    question: "Favorite colour?",
+    answers: [
+      answer("Light blue", "Lia"),
+      answer("Forest green", "Clover"),
+      answer("Monotone colours", "Peter"),
+      answer("Any cool colour", "Natalie"),
+      answer("Burgundy", "Cassian"),
+      answer("Turqouise", "Remi"),
+      answer("Navy blue", "Avior")
+    ]
+  },
+  {
+    question: "What's your go-to drink?",
+    answers: [
+      answer("Fruity iced tea", "Lia"),
+      answer("Lemonade", "Clover"),
+      answer("Coffee", "Peter"),
+      answer("Energy drinks", "Natalie"),
+      answer("Tea", "Cassian"),
+      answer("Alcohol", "Remi"),
+      answer("Water", "Avior")
+    ]
+  },
+  {
+    question: "Favorite genre of books?",
+    answers: [
+      answer("Romance", "Lia"),
+      answer("Fantasy", "Clover"),
+      answer("Non-fiction", "Peter"),
+      answer("Thriller", "Natalie"),
+      answer("Poetry", "Cassian"),
+      answer("Mystery", "Remi"),
+      answer("Self-discovery/self-help", "Avior")
+    ]
+  },
+  {
+    question: "What's your taste in food?",
+    answers: [
+      answer("Sweet", "Lia", "Clover"),
+      answer("Salty", "Cassian"),
+      answer("Sour", "Remi"),
+      answer("Spicy", "Peter", "Natalie"),
+      answer("Bitter", "Avior")
+    ]
+  },
+  {
+    question: "What's your favourite time of the day?",
+    answers: [
+      answer("Afternoon", "Lia"),
+      answer("Morning", "Clover"),
+      answer("Sunrise", "Peter"),
+      answer("Night", "Natalie"),
+      answer("Sunset", "Cassian"),
+      answer("Evening", "Remi"),
+      answer("Midnight", "Avior")
+    ]
+  },
+  {
+    question: "What's your favorite sport?",
+    answers: [
+      answer("Swimming", "Lia"),
+      answer("Track-and-field", "Clover"),
+      answer("Archery/shooting/darts", "Peter"),
+      answer("Wrestling/rugby", "Natalie"),
+      answer("Martial arts/fencing", "Cassian"),
+      answer("I hate sports", "Remi"),
+      answer("I like them all", "Avior")
+    ]
+  },
+  {
+    question: "What's a quote that relates to you the most?",
+    answers: [
+      answer('"Do the best you can until you know better. Then when you know better, do better." - Angelou', "Lia"),
+      answer('"Keep your face always toward the sunshine and shadows will fall behind you." - Whitman', "Clover"),
+      answer('"Where there is no struggle, there is no strength." - Winfrey', "Peter"),
+      answer('"You miss one hundred percent of the shots you don\'t take." - Gretzky', "Natalie"),
+      answer('"Don\'t be pushed around by the fears in your mind. Be led by the dreams in your heart." - Bennett', "Cassian"),
+      answer('"He that can have patience can have what he will." - Franklin', "Remi"),
+      answer('"It is not the mountain we conquer, but ourselves." - Hilary', "Avior")
+    ]
+  },
+  {
+    question: "What's your favorite musical instrument?",
+    answers: [
+      answer("Flute/clarinet", "Lia"),
+      answer("Percussion", "Clover"),
+      answer("Piano/violin", "Peter"),
+      answer("Guitar", "Natalie"),
+      answer("Cello", "Cassian"),
+      answer("Harp", "Remi"),
+      answer("I don't play/like music", "Avior")
+    ]
+  },
+  {
+    question: "What's on the top of your bucket list?",
+    answers: [
+      answer("Solo vacation", "Lia"),
+      answer("Trying every cuisine", "Clover"),
+      answer("Buying a house", "Peter"),
+      answer("Doing an extreme sport", "Natalie"),
+      answer("Settling in different places and meeting strangers", "Cassian"),
+      answer("Achieving as much as I can, like awards", "Remi"),
+      answer("Going offline and becoming unreachable for some time", "Avior")
+    ]
+  },
+  {
+    question: "What's your pet peeve?",
+    answers: [
+      answer("People who give unsolicited advice and recommendations", "Lia"),
+      answer("People who give one word replies", "Clover"),
+      answer("People who cut lines", "Peter"),
+      answer("People who micromanage others", "Natalie"),
+      answer("People who give backhanded compliments", "Cassian"),
+      answer("People who like to one up others", "Remi"),
+      answer("People who leave dirty dishes in the sink", "Avior")
+    ]
+  },
+  {
+    question: "Favorite genre of music?",
+    answers: [
+      answer("Indie", "Lia"),
+      answer("Pop", "Clover"),
+      answer("Classical", "Peter"),
+      answer("Rock", "Natalie"),
+      answer("Jazz", "Cassian"),
+      answer("Alternative", "Remi"),
+      answer("Background noise", "Avior")
+    ]
+  }
+];
+
+// QUIZ ENGINE
+
+let order = [];
+let current = 0;
+let scores = {};
+let locked = false;
+let winningNames = [];
+
+function shuffle(array) {
+  const copy = [...array];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function begin() {
+  current = 0;
+  locked = false;
+  scores = {};
+  winningNames = [];
+  names.forEach(name => scores[name] = 0);
+
+  // Shuffle question order for every new attempt.
+  order = shuffle(questions.map((q, index) => index));
+
+  document.getElementById("start").classList.add("hidden");
+  document.getElementById("result").classList.add("hidden");
+  document.getElementById("quiz").classList.remove("hidden");
+  showQuestion();
+}
+
+function showQuestion() {
+  locked = false;
+  const q = questions[order[current]];
+  const total = order.length;
+  const completed = current;
+
+  document.getElementById("counter").textContent =
+    `QUESTION ${current + 1} OF ${total}`;
+  document.getElementById("percent").textContent =
+    `${Math.round(completed / total * 100)}% COMPLETE`;
+  document.getElementById("progress").style.width =
+    `${completed / total * 100}%`;
+  document.getElementById("question").textContent = q.question;
+
+  const container = document.getElementById("answers");
+  container.innerHTML = "";
+
+  // Shuffle the answers without changing their assigned characters.
+  shuffle(q.answers).forEach((item, index) => {
+    const button = document.createElement("button");
+    button.className = "answer";
+    button.textContent = item.text;
+    button.onclick = () => choose(item, button);
+    container.appendChild(button);
+  });
+}
+
+function choose(item, button) {
+  if (locked) return;
+  locked = true;
+
+  document.querySelectorAll(".answer").forEach(b => b.disabled = true);
+  button.classList.add("selected");
+
+  // Shared answers award one point to every assigned character.
+  item.types.forEach(name => {
+    scores[name] += 1;
+  });
+
+  setTimeout(() => {
+    current++;
+    if (current < order.length) {
+      showQuestion();
+    } else {
+      showResult();
+    }
+  }, 220);
+}
+
+function showResult() {
+  document.getElementById("quiz").classList.add("hidden");
+  document.getElementById("result").classList.remove("hidden");
+  document.getElementById("percent").textContent = "100% COMPLETE";
+  document.getElementById("progress").style.width = "100%";
+
+  const totalPoints = Object.values(scores).reduce((sum, value) => sum + value, 0);
+
+  const percentages = {};
+  names.forEach(name => {
+    percentages[name] = totalPoints === 0
+      ? 0
+      : Math.round(scores[name] / totalPoints * 100);
+  });
+
+  // Sort by score; randomize the order of tied characters.
+  const ranking = shuffle(names).sort((a, b) => scores[b] - scores[a]);
+  const highest = scores[ranking[0]];
+  winningNames = ranking.filter(name => scores[name] === highest);
+
+  const winner = winningNames[0];
+  document.getElementById("symbol").textContent = characters[winner].symbol;
+  document.getElementById("resultTitle").textContent =
+    winningNames.length > 1
+      ? winningNames.join(" & ") + " (Tie)"
+      : winner;
+
+  document.getElementById("description").textContent =
+    winningNames.length > 1
+      ? "You are equally matched with these characters! " +
+        winningNames.map(name => name + ": " + characters[name].description).join(" ")
+      : characters[winner].description;
+
+  const scoresContainer = document.getElementById("scores");
+  scoresContainer.innerHTML = "";
+
+  // Show every character, highest percentage first.
+  ranking.forEach(name => {
+    const row = document.createElement("div");
+    row.className = "score-row";
+
+    const label = document.createElement("div");
+    label.className = "score-label";
+
+    const nameLabel = document.createElement("span");
+    nameLabel.textContent = name;
+
+    const percentLabel = document.createElement("span");
+    percentLabel.textContent = percentages[name] + "%";
+
+    label.append(nameLabel, percentLabel);
+
+    const track = document.createElement("div");
+    track.className = "score-track";
+
+    const fill = document.createElement("div");
+    fill.className = "score-fill";
+    fill.style.width = percentages[name] + "%";
+
+    track.appendChild(fill);
+    row.append(label, track);
+    scoresContainer.appendChild(row);
+  });
+
+  document.getElementById("shareMessage").textContent = "";
+}
+
+async function shareResult() {
+  const title = document.getElementById("resultTitle").textContent;
+  const text = `My character result is ${title} on ${document.title}!`;
+  const shareData = { title: document.title, text, url: location.href };
+
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData);
+    } else if (navigator.clipboard) {
+      await navigator.clipboard.writeText(text + " " + location.href);
+      document.getElementById("shareMessage").textContent =
+        "Result copied! Paste it into a message to share.";
+    } else {
+      document.getElementById("shareMessage").textContent =
+        text + " " + location.href;
+    }
+  } catch (error) {
+    // The visitor may have cancelled the share window.
+  }
+}
+
+function retake() {
+  document.getElementById("result").classList.add("hidden");
+  document.getElementById("start").classList.remove("hidden");
+}
+</script>
+</body>
+</html>
